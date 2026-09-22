@@ -2,6 +2,9 @@ import puppeteer from 'puppeteer-core';
 import { findBrowser } from './browser.mjs';
 import { withVite } from './server.mjs';
 
+// Hosted runners render WebGL in software; wait for the same states with a larger deadline.
+const deadline = (milliseconds) => process.env.CI ? Math.max(milliseconds, 60000) : milliseconds;
+
 await withVite(async (url) => {
   const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--use-angle=swiftshader', '--disable-dev-shm-usage'] : [])], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 1 } });
   const page = await browser.newPage();
@@ -15,7 +18,7 @@ await withVite(async (url) => {
     const boot = await page.evaluate(() => ({ title: document.title, text: document.body.innerText.slice(0, 1200), canvas: document.querySelectorAll('canvas').length }));
     throw new Error(`Game startup failed: ${JSON.stringify({ boot, errors, cause: error.message })}`);
   }
-  await page.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: 15000 });
+  await page.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: deadline(15000) });
   const introCameraStart = await page.evaluate(() => window.__slot.getCameraDebug());
   await page.waitForFunction((start) => {
     const current = window.__slot.getCameraDebug();
@@ -79,7 +82,7 @@ await withVite(async (url) => {
   if (coinDebug.active.length !== 1) throw new Error(`Жетон не находится в анимации: ${JSON.stringify(coinDebug)}`);
   await page.waitForFunction(
     () => window.__slot.getCoinDebug().active.length === 0 && window.__slot.getState().credits === 11,
-    { timeout: 2500 },
+    { timeout: deadline(2500) },
   );
   const coinAccepted = await page.evaluate(() => ({ coin: window.__slot.getCoinDebug(), credits: window.__slot.getState().credits }));
   if (coinAccepted.coin.active.length !== 0 || coinAccepted.credits !== 11) throw new Error(`Жетон не завершил вход: ${JSON.stringify(coinAccepted)}`);
@@ -87,7 +90,7 @@ await withVite(async (url) => {
     window.__slot.force(['onec', 'onec', 'onec']);
     window.__slot.spin();
   });
-  await page.waitForFunction(() => window.__slot.getState().mode === 'idle' && Number(document.querySelector('#win').textContent) === 100, { timeout: 8000 });
+  await page.waitForFunction(() => window.__slot.getState().mode === 'idle' && Number(document.querySelector('#win').textContent) === 100, { timeout: deadline(8000) });
   const report = await page.evaluate(() => ({
     state: window.__slot.getState(),
     visible: window.__slot.getLastVisible(),
@@ -100,7 +103,7 @@ await withVite(async (url) => {
     window.__slot.force(['nuraliev', 'nuraliev', 'nuraliev']);
     window.__slot.spin();
   });
-  await page.waitForFunction(() => window.__slot.getState().mode === 'idle' && window.__slot.getOracleDebug().tone === 'jackpot', { timeout: 8000 });
+  await page.waitForFunction(() => window.__slot.getState().mode === 'idle' && window.__slot.getOracleDebug().tone === 'jackpot', { timeout: deadline(8000) });
   const jackpotPresentation = await page.evaluate(() => ({
     oracle: window.__slot.getOracleDebug(),
     toastShown: document.querySelector('#toast').classList.contains('show'),
@@ -115,14 +118,14 @@ await withVite(async (url) => {
     else request.continue();
   });
   await fallbackPage.goto(url, { waitUntil: 'domcontentloaded' });
-  await fallbackPage.waitForFunction(() => window.__slotReady === true, { timeout: 15000 });
+  await fallbackPage.waitForFunction(() => window.__slotReady === true, { timeout: deadline(15000) });
   const fallbackStatus = await fallbackPage.$eval('#status', (node) => node.textContent);
   await fallbackPage.close();
 
   const mobilePage = await browser.newPage();
   await mobilePage.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await mobilePage.goto(url, { waitUntil: 'domcontentloaded' });
-  await mobilePage.waitForFunction(() => window.__slotReady === true, { timeout: 15000 });
+  await mobilePage.waitForFunction(() => window.__slotReady === true, { timeout: deadline(15000) });
   await mobilePage.bringToFront();
   const mobileOpen = await mobilePage.evaluate(() => {
     window.__slot.start();
