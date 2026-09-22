@@ -17,7 +17,10 @@ await withVite(async (url) => {
   }
   await page.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: 15000 });
   const introCameraStart = await page.evaluate(() => window.__slot.getCameraDebug());
-  await new Promise((resolve) => setTimeout(resolve, 320));
+  await page.waitForFunction((start) => {
+    const current = window.__slot.getCameraDebug();
+    return Math.hypot(...current.position.map((value, index) => value - start.position[index])) >= .025;
+  }, { timeout: process.env.CI ? 30000 : 5000 }, introCameraStart);
   const introCameraMoved = await page.evaluate(() => window.__slot.getCameraDebug());
   const introDistance = Math.hypot(...introCameraMoved.position.map((value, index) => value - introCameraStart.position[index]));
   if (!introCameraStart.cinematic || introDistance < .025) {
@@ -28,7 +31,7 @@ await withVite(async (url) => {
   if (!introCameraSettling.settling || introCameraSettling.cinematic) {
     throw new Error(`Камера не начала посадку в игровой ракурс: ${JSON.stringify(introCameraSettling)}`);
   }
-  await page.waitForFunction(() => !window.__slot.getCameraDebug().settling, { timeout: 2500 });
+  await page.waitForFunction(() => !window.__slot.getCameraDebug().settling, { timeout: process.env.CI ? 30000 : 2500 });
   const introCameraSettled = await page.evaluate(() => window.__slot.getCameraDebug());
   await page.evaluate(() => {
     const quality = document.querySelector('#graphicsQuality');
@@ -54,7 +57,7 @@ await withVite(async (url) => {
     fps.checked = true;
     fps.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  await page.waitForFunction(() => window.__slot.getGraphicsDebug().fps > 0, { timeout: process.env.CI ? 30000 : 5000 });
   const graphicsApplied = await page.evaluate(() => window.__slot.getGraphicsDebug());
   if (graphicsApplied.quality !== 'economy' || graphicsApplied.pixelRatio > 1.01 || graphicsApplied.shadows || graphicsApplied.bloom || !graphicsApplied.fpsVisible || graphicsApplied.fps <= 0) {
     throw new Error(`Графические настройки не применились: ${JSON.stringify(graphicsApplied)}`);
