@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vite/
+coverage/
+*.log
+shots/**
+!shots/.gitkeep
+!shots/README.md
+tmp/
+.env
+.env.*
+!.env.example
