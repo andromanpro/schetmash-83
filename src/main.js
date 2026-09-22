@@ -937,7 +937,7 @@ function updateShadowCache() {
   const next = [
     mode === 'spinning',
     machine.root.position.x, machine.root.rotation.z,
-    machine.lever.rotation.z,
+    machine.lever.rotation.x,
     machine.oracle.displayPanel.position.x,
     machine.oracle.receipt.mesh.visible,
     machine.oracle.receipt.mesh.geometry.attributes.position.version,
