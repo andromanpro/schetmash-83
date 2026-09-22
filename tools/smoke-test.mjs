@@ -169,8 +169,18 @@ await withVite(async (url) => {
       canvas: { width: canvas.width, height: canvas.height, viewportWidth: innerWidth, viewportHeight: innerHeight },
     };
   });
+  // Wait for the drawer's slide-in transition before sending native key input.
+  // A software-rendered browser may not paint it within a fixed 100 ms delay.
+  await mobilePage.waitForFunction(() => {
+    const panel = document.querySelector('#payoutPanel');
+    const rect = panel.getBoundingClientRect();
+    return rect.left >= -1 && rect.right <= innerWidth + 1
+      && getComputedStyle(panel).visibility !== 'hidden';
+  }, { timeout: deadline(5000) });
   await mobilePage.keyboard.press('Tab');
+  await mobilePage.waitForFunction(() => document.activeElement?.matches('#payoutPanel [data-close]'), { timeout: deadline(3000) });
   await mobilePage.keyboard.press('Tab');
+  await mobilePage.waitForFunction(() => document.activeElement?.matches('#payoutPanel [data-close]'), { timeout: deadline(3000) });
   const mobileTrap = await mobilePage.evaluate(() => document.activeElement?.matches('#payoutPanel [data-close]'));
   await mobilePage.keyboard.press('Escape');
   const mobileClose = await mobilePage.evaluate(() => ({
@@ -178,7 +188,6 @@ await withVite(async (url) => {
     focusReturned: document.activeElement === document.querySelector('#paytableBtn'),
   }));
   await mobilePage.close();
-  await browser.close();
   if (errors.length) throw new Error(errors.join('\n'));
   if (report.visible.some((id) => id !== 'onec')) throw new Error(`Неверный результат барабанов: ${report.visible.join(', ')}`);
   if (report.oracle.tone !== 'approve' || !report.oracle.message.includes('ПРОВЕДЁН') || report.oracle.receiptTarget <= 0 || report.oracle.receiptEntries !== 1) throw new Error(`Оракул не одобрил выигрыш: ${JSON.stringify(report.oracle)}`);
