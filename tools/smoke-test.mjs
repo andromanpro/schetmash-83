@@ -9,6 +9,7 @@ await withVite(async (url) => {
   const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--use-angle=swiftshader', '--disable-dev-shm-usage'] : [])], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 1 } });
   const page = await browser.newPage();
   const errors = [];
+  try {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack || error.message}`));
   await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -206,4 +207,16 @@ await withVite(async (url) => {
     mobileTrap,
     mobileClose,
   }, null, 2));
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      hidden: document.hidden,
+      graphics: window.__slot?.getGraphicsDebug(),
+      state: window.__slot?.getState(),
+      coin: window.__slot?.getCoinDebug(),
+    })).catch(() => null);
+    console.error(JSON.stringify({ diagnostics, errors }, null, 2));
+    throw error;
+  } finally {
+    await browser.close();
+  }
 });

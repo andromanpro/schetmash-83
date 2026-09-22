@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 
-export default defineConfig({
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+
+export default defineConfig(({ mode }) => ({
+  server: mode === 'test' ? { hmr: false, watch: null } : undefined,
   base: './',
   resolve: {
     alias: [
@@ -9,7 +13,7 @@ export default defineConfig({
     ],
   },
   define: {
-    __BUILD_INFO__: JSON.stringify(`prototype 0.4 · ${new Date().toLocaleDateString('ru-RU')}`),
+    __BUILD_INFO__: JSON.stringify(`v${version} · ${new Date().toLocaleDateString('ru-RU')}`),
   },
   build: {
     rolldownOptions: {
@@ -24,4 +28,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

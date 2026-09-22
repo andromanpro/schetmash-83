@@ -1,6 +1,6 @@
 {
   "name": "schetmash-83",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Ретрофутуристический 3D-слот СЧЁТМАШ-83 с символами из мира 1С",
   "private": true,
   "type": "module",
@@ -8,13 +8,14 @@
     "dev": "vite --port 5274",
     "build": "vite build && node tools/production-check.mjs",
     "preview": "vite preview --port 4274",
-    "test": "npm run test:math && npm run test:receipt && npm run smoke-test",
+    "test": "npm run test:math && npm run test:receipt && npm run test:render && npm run smoke-test",
     "test:math": "node tools/game-math-test.mjs",
     "test:receipt": "node tools/receipt-paper-test.mjs",
     "smoke-test": "node tools/smoke-test.mjs",
     "audit:runtime": "node tools/runtime-audit.mjs",
     "shot": "node tools/shot.mjs",
-    "shot:receipt": "node tools/receipt-visual-check.mjs"
+    "shot:receipt": "node tools/receipt-visual-check.mjs",
+    "test:render": "node tools/static-batches-test.mjs"
   },
   "dependencies": {
     "three": "^0.185.1"

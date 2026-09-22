@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from 'node:util';
 export async function withVite(callback, { port = 5274 } = {}) {
   const root = fileURLToPath(new URL('..', import.meta.url));
   const vite = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url));
-  const child = spawn(process.execPath, [vite, '--port', String(port), '--host', '127.0.0.1', '--strictPort'], {
+  const child = spawn(process.execPath, [vite, '--port', String(port), '--host', '127.0.0.1', '--strictPort', '--mode', 'test'], {
     cwd: root,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
@@ -31,6 +31,9 @@ export async function withVite(callback, { port = 5274 } = {}) {
     }
     if (!ready) throw new Error(`Vite did not start: ${output}`);
     return await callback(url);
+  } catch (error) {
+    error.message += `\nVite output:\n${stripVTControlCharacters(output)}`;
+    throw error;
   } finally {
     child.kill();
   }

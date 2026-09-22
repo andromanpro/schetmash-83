@@ -929,6 +929,27 @@ document.addEventListener('visibilitychange', () => {
   if (!pageVisible) audio.stopMotor();
 });
 
+// The key light and cabinet are stationary most of the time. Camera movement,
+// emissive lamps and scrolling reel textures do not change their shadow map.
+renderer.shadowMap.autoUpdate = false;
+let previousShadowState = null;
+function updateShadowCache() {
+  const next = [
+    mode === 'spinning',
+    machine.root.position.x, machine.root.rotation.z,
+    machine.lever.rotation.z,
+    machine.oracle.displayPanel.position.x,
+    machine.oracle.receipt.mesh.visible,
+    machine.oracle.receipt.mesh.geometry.attributes.position.version,
+    machine.coinSystem.active.length,
+  ];
+  if (!previousShadowState || next.some((value, index) => value !== previousShadowState[index])
+    || mode === 'spinning' || machine.coinSystem.active.length) {
+    renderer.shadowMap.needsUpdate = true;
+  }
+  previousShadowState = next;
+}
+
 function animate(now = performance.now()) {
   requestAnimationFrame(animate);
   if (!pageVisible) return;
@@ -949,6 +970,7 @@ function animate(now = performance.now()) {
   const shake = state.shake && !reducedMotion && mode === 'spinning' ? Math.sin(now * .075) * .0045 : 0;
   machine.root.position.x = shake;
   machine.root.rotation.z = shake * .25;
+  updateShadowCache();
   composer.render();
   updateFpsCounter(now, frameDeltaMs);
 

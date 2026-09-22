@@ -124,6 +124,8 @@ export class ReceiptPaper {
     this.previous.fill(0);
     this.uvs.fill(0);
     this.rowMaterial.fill(0);
+    this.materialLength = NaN;
+    this.materialRows = -1;
 
     // A microscopic outward bias gives the first length constraint a
     // deterministic direction when the two initial rows separate.
@@ -136,6 +138,7 @@ export class ReceiptPaper {
 
   update(now, dt, reducedMotion = false) {
     if (reducedMotion) {
+      if (this.length === this.targetLength) return;
       if (this.length !== this.targetLength) {
         this.length = this.targetLength;
         this.#ensureRows();
@@ -147,6 +150,7 @@ export class ReceiptPaper {
       return;
     }
 
+    const previousRows = this.activeRows;
     if (this.length < this.targetLength) {
       const feedPulse = .82 + Math.max(0, Math.sin(now * .052)) * .34;
       this.length = Math.min(this.targetLength, this.length + dt * .31 * feedPulse);
@@ -166,7 +170,7 @@ export class ReceiptPaper {
     if (steps === MAX_SUBSTEPS) this.accumulator = 0;
 
     this.#updateMaterialCoordinates();
-    this.#updateGeometry();
+    if (steps > 0 || previousRows !== this.activeRows) this.#updateGeometry();
   }
 
   debug() {
@@ -619,12 +623,14 @@ export class ReceiptPaper {
       const centerIndex = (row * this.columns + Math.floor(this.columns / 2)) * 3;
       const centerY = this.positions[centerIndex + 1];
       const centerZ = this.positions[centerIndex + 2];
+      const acrossX = this.width * Math.cos(shape.yaw);
+      const acrossZ = this.width * Math.sin(shape.yaw);
       for (let column = 0; column < this.columns; column += 1) {
         const across = column / (this.columns - 1) - .5;
         const index = (row * this.columns + column) * 3;
         if (inElasticBend || inDrape || inHangingRoll || onGroundPath) {
-          const targetX = shape.x + across * this.width * Math.cos(shape.yaw);
-          const targetZ = shape.z + across * this.width * Math.sin(shape.yaw);
+          const targetX = shape.x + across * acrossX;
+          const targetZ = shape.z + across * acrossZ;
           const strength = onGroundPath
             ? (distanceFromSlot > coilStart ? .56 : .60)
             : inHangingRoll ? .48 : inDrape ? .24 : elasticWeight;
@@ -664,12 +670,14 @@ export class ReceiptPaper {
     const dx = this.positions[indexB] - this.positions[indexA];
     const dy = this.positions[indexB + 1] - this.positions[indexA + 1];
     const dz = this.positions[indexB + 2] - this.positions[indexA + 2];
-    const distance = Math.hypot(dx, dy, dz);
+    // Paper coordinates are bounded to a few world units. The general-purpose
+    // overflow scaling in Math.hypot is unnecessary in this hottest loop.
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (distance < EPSILON) return;
 
-    const pinnedRow = this.activeRows - 1;
-    const invA = Math.floor(pointA / this.columns) === pinnedRow ? 0 : 1;
-    const invB = Math.floor(pointB / this.columns) === pinnedRow ? 0 : 1;
+    const pinnedStart = (this.activeRows - 1) * this.columns;
+    const invA = pointA >= pinnedStart ? 0 : 1;
+    const invB = pointB >= pinnedStart ? 0 : 1;
     const invTotal = invA + invB;
     if (invTotal === 0) return;
 
@@ -752,6 +760,7 @@ export class ReceiptPaper {
   }
 
   #updateMaterialCoordinates() {
+    if (this.materialLength === this.length && this.materialRows === this.activeRows) return;
     for (let row = 0; row < this.activeRows; row += 1) {
       const material = Math.min(row * this.segmentLength, this.length);
       this.rowMaterial[row] = material;
@@ -762,13 +771,15 @@ export class ReceiptPaper {
         this.uvs[uvIndex + 1] = v;
       }
     }
+    this.materialLength = this.length;
+    this.materialRows = this.activeRows;
+    this.mesh.geometry.attributes.uv.needsUpdate = true;
   }
 
   #updateGeometry() {
     const geometry = this.mesh.geometry;
     geometry.setDrawRange(0, Math.max(0, this.activeRows - 1) * (this.columns - 1) * 6);
     geometry.attributes.position.needsUpdate = true;
-    geometry.attributes.uv.needsUpdate = true;
     geometry.computeVertexNormals();
   }
 }

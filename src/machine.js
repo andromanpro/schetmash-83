@@ -32,6 +32,7 @@ import {
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CoinFX } from './coin-fx.js';
 import { ReceiptPaper } from './receipt-paper.js';
+import { batchStaticMeshes } from './static-batches.js';
 
 const C = {
   body: 0x142820,
@@ -826,10 +827,12 @@ export function createCabinet({ reelTextures, paylines = [] }) {
     if (object.userData.action) interactives.push(object);
   });
 
+  const staticBatches = batchStaticMeshes(root, [oracle.displayPanel, oracle.receipt.mesh]);
+
   return {
     root, reels, lever, physicalButton, coinSlot, coinSystem, counterDisplays,
     paylineLights, paylineVisuals, symbolHighlights, celebrationFx, winLights,
-    panoramicGlass, lineDisplay, oracle, interactives,
+    panoramicGlass, lineDisplay, oracle, interactives, staticBatches,
   };
 }
 
