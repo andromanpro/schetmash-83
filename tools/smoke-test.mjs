@@ -143,11 +143,12 @@ await withVite(async (url) => {
   await mobilePage.waitForFunction(() => window.__slotReady === true, { timeout: deadline(15000) });
   await mobilePage.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: deadline(15000) });
   await mobilePage.bringToFront();
+  await mobilePage.evaluate(() => window.__slot.start());
+  await mobilePage.waitForFunction(() => getComputedStyle(document.querySelector('.topbar')).opacity === '1', { timeout: deadline(5000) });
+  await mobilePage.focus('#paytableBtn');
   const mobileOpen = await mobilePage.evaluate(() => {
-    window.__slot.start();
     const opener = document.querySelector('#paytableBtn');
-    opener.focus();
-    if (document.activeElement !== opener) throw new Error('Paytable opener is not focusable after application startup');
+    if (document.activeElement !== opener) throw new Error(`Paytable opener is not focusable: ${JSON.stringify({ active: document.activeElement?.outerHTML.slice(0, 200), button: opener.outerHTML, visibility: getComputedStyle(opener).visibility, display: getComputedStyle(opener).display, body: document.body.className, focused: document.hasFocus() })}`);
     opener.click();
     const panel = document.querySelector('#payoutPanel');
     return {
