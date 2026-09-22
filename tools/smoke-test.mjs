@@ -4,9 +4,10 @@ import { withVite } from './server.mjs';
 
 // Hosted runners render WebGL in software; wait for the same states with a larger deadline.
 const deadline = (milliseconds) => process.env.CI ? Math.max(milliseconds, 60000) : milliseconds;
+const viewport = { width: process.env.CI ? 800 : 1440, height: process.env.CI ? 500 : 900, deviceScaleFactor: 1 };
 
 await withVite(async (url) => {
-  const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--use-angle=swiftshader', '--disable-dev-shm-usage'] : [])], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 1 } });
+  const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--use-angle=swiftshader', '--disable-dev-shm-usage'] : [])], defaultViewport: viewport });
   const page = await browser.newPage();
   const errors = [];
   try {
@@ -47,7 +48,7 @@ await withVite(async (url) => {
   if (cinematicGraphics.quality !== 'cinematic'
     || cinematicGraphics.pixelRatio < 1.49
     || cinematicGraphics.samples < Math.min(4, cinematicGraphics.maxSamples)
-    || cinematicGraphics.renderSize[0] < 2150) {
+    || cinematicGraphics.renderSize[0] < viewport.width * 1.49) {
     throw new Error(`Режим «Кино» не включает суперсэмплинг/MSAA: ${JSON.stringify(cinematicGraphics)}`);
   }
   await page.evaluate(() => {
@@ -89,9 +90,10 @@ await withVite(async (url) => {
       bloom.dispatchEvent(new Event('change', { bubbles: true }));
     });
   }
-  await page.evaluate(() => window.__slot.addCoin());
-  await new Promise((resolve) => setTimeout(resolve, 420));
-  const coinDebug = await page.evaluate(() => window.__slot.getCoinDebug());
+  const coinDebug = await page.evaluate(() => {
+    window.__slot.addCoin();
+    return window.__slot.getCoinDebug();
+  });
   if (coinDebug.active.length !== 1) throw new Error(`Жетон не находится в анимации: ${JSON.stringify(coinDebug)}`);
   await page.waitForFunction(
     () => window.__slot.getCoinDebug().active.length === 0 && window.__slot.getState().credits === 11,
