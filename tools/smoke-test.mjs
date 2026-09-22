@@ -3,13 +3,18 @@ import { findBrowser } from './browser.mjs';
 import { withVite } from './server.mjs';
 
 await withVite(async (url) => {
-  const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 1 } });
+  const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--use-angle=swiftshader', '--disable-dev-shm-usage'] : [])], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 1 } });
   const page = await browser.newPage();
   const errors = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack || error.message}`));
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__slotReady === true, { timeout: 15000 });
+  try {
+    await page.waitForFunction(() => window.__slotReady === true, { timeout: process.env.CI ? 60000 : 15000 });
+  } catch (error) {
+    const boot = await page.evaluate(() => ({ title: document.title, text: document.body.innerText.slice(0, 1200), canvas: document.querySelectorAll('canvas').length }));
+    throw new Error(`Game startup failed: ${JSON.stringify({ boot, errors, cause: error.message })}`);
+  }
   await page.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: 15000 });
   const introCameraStart = await page.evaluate(() => window.__slot.getCameraDebug());
   await new Promise((resolve) => setTimeout(resolve, 320));
