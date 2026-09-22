@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 
 export async function withVite(callback, { port = 5274 } = {}) {
   const root = fileURLToPath(new URL('..', import.meta.url));
@@ -20,7 +21,7 @@ export async function withVite(callback, { port = 5274 } = {}) {
       if (child.exitCode !== null) throw new Error(`Vite exited before startup: ${output}`);
       // Wait for this process to report readiness, so a busy port cannot
       // silently send the test to an unrelated server.
-      if (output.includes(url)) {
+      if (stripVTControlCharacters(output).includes(url)) {
         try {
           const response = await fetch(url);
           if (response.ok) { ready = true; break; }
