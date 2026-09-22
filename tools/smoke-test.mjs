@@ -76,6 +76,18 @@ await withVite(async (url) => {
     fps.checked = false;
     fps.dispatchEvent(new Event('change', { bubbles: true }));
   });
+  if (process.env.CI) {
+    // Graphics controls were checked above. Exercise gameplay with the same
+    // low-cost mode offered to players, rather than benchmarking software GL.
+    await page.evaluate(() => {
+      const quality = document.querySelector('#graphicsQuality');
+      quality.value = 'economy';
+      quality.dispatchEvent(new Event('change', { bubbles: true }));
+      const bloom = document.querySelector('#bloomToggle');
+      bloom.checked = false;
+      bloom.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
   await page.evaluate(() => window.__slot.addCoin());
   await new Promise((resolve) => setTimeout(resolve, 420));
   const coinDebug = await page.evaluate(() => window.__slot.getCoinDebug());
