@@ -141,11 +141,13 @@ await withVite(async (url) => {
   await mobilePage.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await mobilePage.goto(url, { waitUntil: 'domcontentloaded' });
   await mobilePage.waitForFunction(() => window.__slotReady === true, { timeout: deadline(15000) });
+  await mobilePage.waitForFunction(() => document.body.classList.contains('app-ready'), { timeout: deadline(15000) });
   await mobilePage.bringToFront();
   const mobileOpen = await mobilePage.evaluate(() => {
     window.__slot.start();
     const opener = document.querySelector('#paytableBtn');
     opener.focus();
+    if (document.activeElement !== opener) throw new Error('Paytable opener is not focusable after application startup');
     opener.click();
     const panel = document.querySelector('#payoutPanel');
     return {
