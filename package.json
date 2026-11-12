@@ -18,11 +18,11 @@
     "test:render": "node tools/static-batches-test.mjs"
   },
   "dependencies": {
-    "three": "^0.185.1"
+    "three": "^0.187.0"
   },
   "devDependencies": {
-    "puppeteer-core": "^25.3.0",
-    "vite": "^8.1.3"
+    "puppeteer-core": "^25.16.0",
+    "vite": "^8.3.7"
   },
   "license": "MIT",
   "author": "Androman (https://androman.pro)",
